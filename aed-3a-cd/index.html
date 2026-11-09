@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comprovante de atividade</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:16px;background:#f4f6f8;color:#222}
+h1{font-size:20px;margin-bottom:4px}
+label{display:block;margin:12px 0 4px;font-weight:bold}
+input,select,button{width:100%;padding:12px;font-size:16px;box-sizing:border-box}
+button{margin-top:16px;background:#1a73e8;color:#fff;border:0;border-radius:6px}
+button:disabled{opacity:.6}
+#msg{margin-top:16px}
+.erro{color:#c5221f}
+.card{background:#fff}
+a.bt{display:block;text-align:center;margin-top:12px;padding:12px;background:#188038;color:#fff;border-radius:6px;text-decoration:none}
+</style>
+</head>
+<body>
+<h1>Comprovante de atividade</h1>
+<div>Análise Exploratória de Dados e Inteligência de Negócios — 3ºA CD — 4º bimestre</div>
+<label for="sem">Semana</label>
+<select id="sem">
+<option value="21">Semana 21 — Projeto de Análise Exploratória de Dados</option>
+<option value="22">Semana 22 — Modelagem dimensional no Power BI</option>
+<option value="23">Semana 23 — Power BI Service e gateway de dados</option>
+<option value="24">Semana 24 — Fluxos de dados e modelos semânticos</option>
+<option value="25">Semana 25 — Relatórios paginados, scorecards, painéis e aplicativos</option>
+<option value="26">Semana 26 — Projeto guiado: mudanças climáticas</option>
+</select>
+<label for="ra">RA (só os números)</label>
+<input id="ra" inputmode="numeric" autocomplete="off">
+<button id="bt">Gerar comprovante</button>
+<div id="msg"></div>
+<script>
+var API = "https://script.google.com/macros/s/AKfycbzyxfli3B1cCGcsxArxz7fS0tD0ESGcDZO_zJcS5r9io05H6WvtmRDMf5-wYjFNtBc/exec";
+var sem = document.getElementById("sem"), ra = document.getElementById("ra"),
+    bt = document.getElementById("bt"), msg = document.getElementById("msg");
+var s = new URLSearchParams(location.search).get("semana");
+if (s && sem.querySelector('option[value="' + s.replace(/\D/g, "") + '"]')) sem.value = s;
+
+function erro(t) {
+  var p = document.createElement("p"); p.className = "erro"; p.textContent = t;
+  msg.innerHTML = ""; msg.appendChild(p);
+}
+function fim() { bt.disabled = false; bt.textContent = "Gerar comprovante"; }
+
+bt.addEventListener("click", function () {
+  bt.disabled = true; bt.textContent = "Gerando..."; msg.innerHTML = "";
+  var ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, 45000);
+  fetch(API + "?api=1&semana=" + encodeURIComponent(sem.value) + "&ra=" + encodeURIComponent(ra.value),
+        { credentials: "omit", signal: ctl.signal })
+    .then(function (r) { return r.json(); })
+    .then(function (r) {
+      clearTimeout(t); fim();
+      if (r.erro) { erro(r.erro); return; }
+      msg.innerHTML = r.html;
+      var bin = atob(r.pdf), n = bin.length, b = new Uint8Array(n);
+      while (n--) b[n] = bin.charCodeAt(n);
+      var a = document.createElement("a");
+      a.className = "bt"; a.textContent = "Baixar PDF"; a.download = r.arquivo;
+      a.href = URL.createObjectURL(new Blob([b], { type: "application/pdf" }));
+      msg.appendChild(a);
+    })
+    .catch(function () {
+      clearTimeout(t); fim();
+      erro("Não consegui consultar agora. Confira sua internet e tente de novo.");
+    });
+});
+</script>
+</body>
+</html>
